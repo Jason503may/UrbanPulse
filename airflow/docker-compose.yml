@@ -1,0 +1,12 @@
+services:
+
+  airflow-webserver:
+    image: apache/airflow:2.10
+
+  airflow-scheduler:
+    image: apache/airflow:2.10
+
+  postgres:
+    image: postgres:16
+
+

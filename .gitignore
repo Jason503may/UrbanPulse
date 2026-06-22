@@ -1,0 +1,31 @@
+# Project-specific logs
+logs/
+*.log
+
+# Airflow
+airflow/logs/
+airflow/*.pid
+airflow/airflow.db
+
+# Kafka / Spark temporary files
+tmp/
+temp/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Archives
+urbanpulse.zip
+urbanpulse_core.zip
+*.zip
+
+# IDE files
+.vscode/
+.idea/
+
+# Generated data
+data/output/
+data/processed/
+datas/output/

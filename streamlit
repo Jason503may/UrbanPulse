@@ -1,0 +1,274 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+from streamlit_autorefresh import st_autorefresh
+
+# --------------------------------
+# PAGE CONFIG
+# --------------------------------
+
+st.set_page_config(
+    page_title="UrbanPulse Dashboard",
+    page_icon="🌆",
+    layout="wide"
+)
+
+# --------------------------------
+# AUTO REFRESH
+# --------------------------------
+
+st_autorefresh(
+    interval=5000,
+    key="urbanpulse_refresh"
+)
+
+# --------------------------------
+# LOAD DATA
+# --------------------------------
+
+@st.cache_data(ttl=5)
+def load_data():
+
+    city_metrics = pd.read_parquet(
+        "data/gold/city_metrics"
+    )
+
+    stress = pd.read_parquet(
+        "data/gold/stress_index"
+    )
+
+    alerts = pd.read_parquet(
+        "data/gold/alerts"
+    )
+
+    return city_metrics, stress, alerts
+
+
+city_metrics, stress_df, alerts_df = load_data()
+
+# --------------------------------
+# HEADER
+# --------------------------------
+
+st.title("🌆 UrbanPulse Real-Time Dashboard")
+
+st.markdown(
+    "Live Urban Health Monitoring for Tamil Nadu Cities"
+)
+
+# --------------------------------
+# KPI ROW
+# --------------------------------
+
+c1, c2, c3, c4 = st.columns(4)
+
+c1.metric(
+    "Cities",
+    len(city_metrics)
+)
+
+c2.metric(
+    "Avg Temperature",
+    round(
+        city_metrics["avg_temperature"].mean(),
+        1
+    )
+)
+
+c3.metric(
+    "Avg PM2.5",
+    round(
+        city_metrics["avg_pm25"].mean(),
+        1
+    )
+)
+
+c4.metric(
+    "Avg Traffic",
+    round(
+        city_metrics["avg_traffic"].mean(),
+        1
+    )
+)
+
+st.divider()
+
+# --------------------------------
+# CITY FILTER
+# --------------------------------
+
+selected_city = st.selectbox(
+    "Select City",
+    city_metrics["city"].tolist()
+)
+
+city_row = city_metrics[
+    city_metrics["city"] == selected_city
+]
+
+stress_row = stress_df[
+    stress_df["city"] == selected_city
+]
+
+# --------------------------------
+# CHART ROW 1
+# --------------------------------
+
+col1, col2 = st.columns(2)
+
+with col1:
+
+    temp_fig = px.bar(
+        city_metrics,
+        x="city",
+        y="avg_temperature",
+        title="🌡 Average Temperature"
+    )
+
+    st.plotly_chart(
+        temp_fig,
+        use_container_width=True,
+        key="temp_chart"
+    )
+
+with col2:
+
+    pm_fig = px.pie(
+        city_metrics,
+        names="city",
+        values="avg_pm25",
+        title="🏭 PM2.5 Distribution"
+    )
+
+    st.plotly_chart(
+        pm_fig,
+        use_container_width=True,
+        key="pm_chart"
+    )
+
+# --------------------------------
+# CHART ROW 2
+# --------------------------------
+
+col3, col4 = st.columns(2)
+
+with col3:
+
+    traffic_fig = px.area(
+        city_metrics,
+        x="city",
+        y="avg_traffic",
+        title="🚗 Traffic Density"
+    )
+
+    st.plotly_chart(
+        traffic_fig,
+        use_container_width=True,
+        key="traffic_chart"
+    )
+
+with col4:
+
+    stress_value = float(
+        stress_row["stress_index"].iloc[0]
+    )
+
+    gauge = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=stress_value,
+            title={
+                "text":
+                f"{selected_city} Stress Index"
+            },
+            gauge={
+                "axis": {
+                    "range": [0, 100]
+                },
+                "steps": [
+                    {
+                        "range": [0, 40],
+                        "color": "green"
+                    },
+                    {
+                        "range": [40, 70],
+                        "color": "orange"
+                    },
+                    {
+                        "range": [70, 100],
+                        "color": "red"
+                    }
+                ]
+            }
+        )
+    )
+
+    st.plotly_chart(
+        gauge,
+        use_container_width=True,
+        key="stress_gauge"
+    )
+
+# --------------------------------
+# CITY DETAILS
+# --------------------------------
+
+st.divider()
+
+st.subheader(
+    f"📍 {selected_city} Metrics"
+)
+
+st.dataframe(
+    city_row,
+    use_container_width=True
+)
+
+# --------------------------------
+# ALERTS
+# --------------------------------
+
+st.divider()
+
+st.subheader("🚨 Alerts")
+
+st.dataframe(
+    alerts_df.sort_values(
+        "generated_at",
+        ascending=False
+    ),
+    use_container_width=True
+)
+
+# --------------------------------
+# STRESS TABLE
+# --------------------------------
+
+st.divider()
+
+st.subheader(
+    "📊 Stress Index Ranking"
+)
+
+ranking = stress_df.sort_values(
+    "stress_index",
+    ascending=False
+)
+
+st.dataframe(
+    ranking,
+    use_container_width=True
+)
+
+# --------------------------------
+# FOOTER
+# --------------------------------
+
+st.caption(
+    "UrbanPulse • Kafka + Spark + Streamlit"
+)
+
+
+
